@@ -1880,7 +1880,8 @@ class MaskRCNN(object):
                 shape=[None, 4], name="input_gt_boxes", dtype=tf.float32)
             # Normalize coordinates
             gt_boxes = KL.Lambda(lambda x: norm_boxes_graph(
-                x, K.shape(input_image)[1:3]))(input_gt_boxes)
+               x, K.shape(input_image)[1:3]), output_shape=(None, 4))(input_gt_boxes)
+            # lambda output shape
             # 3. GT Masks (zero padded)
             # [batch, height, width, MAX_GT_INSTANCES]
             if config.USE_MINI_MASK:
@@ -1983,9 +1984,10 @@ class MaskRCNN(object):
         if mode == "training":
             # Class ID mask to mark class IDs supported by the dataset the image
             # came from.
-            active_class_ids = KL.Lambda(
-                lambda x: parse_image_meta_graph(x)["active_class_ids"]
-                )(input_image_meta)
+              active_class_ids = KL.Lambda(
+                lambda x: parse_image_meta_graph(x)["active_class_ids"], 
+                output_shape=(None,))(input_image_meta)
+                #lambda output shape
 
             if not config.USE_RPN_ROIS:
                 # Ignore predicted ROIs and use ROIs provided as an input.
@@ -2020,7 +2022,7 @@ class MaskRCNN(object):
                                               train_bn=config.TRAIN_BN)
 
             # TODO: clean up (use tf.identify if necessary)
-            output_rois = KL.Lambda(lambda x: x * 1, name="output_rois")(rois)
+            output_rois = KL.Lambda(lambda x: x * 1, output_shape=(None, 4), name="output_rois")(rois)
 
             # Losses
             rpn_class_loss = KL.Lambda(lambda x: rpn_class_loss_graph(*x), name="rpn_class_loss")(
